@@ -1,13 +1,41 @@
 import axios from 'axios';
+import { config } from '../config/config';
 
-const API_BASE_URL = 'http://localhost:5001/api';
-
+// สร้าง axios instance
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: config.apiUrl, // ใช้จาก config
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Interceptor - เพิ่ม token ก่อนส่ง request ทุกครั้ง
+api.interceptors.request.use(
+  (requestConfig) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      requestConfig.headers.Authorization = `Bearer ${token}`;
+    }
+    return requestConfig;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Interceptor - จัดการกรณี token หมดอายุ (401)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // ลบข้อมูล token + user ออกจาก localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+
+      // redirect ไปหน้า login
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Products API
 export const productApi = {
@@ -35,6 +63,7 @@ export const quotationApi = {
   update: (id: number, data: any) => api.put(`/quotations/${id}`, data),
   delete: (id: number) => api.delete(`/quotations/${id}`),
   convertToInvoice: (id: number) => api.post(`/quotations/${id}/convert-to-invoice`),
+  addSignature: (id: number, data: any) => api.post(`/quotations/${id}/signature`, data),
 };
 
 // Invoices API
@@ -45,6 +74,36 @@ export const invoiceApi = {
   updateStatus: (id: number, status: string) => api.patch(`/invoices/${id}/status`, { status }),
   recordPayment: (id: number, data: any) => api.post(`/invoices/${id}/payments`, data),
   delete: (id: number) => api.delete(`/invoices/${id}`),
+  addSignature: (id: number, data: any) => api.post(`/invoices/${id}/signature`, data),
+};
+
+// Upload API
+export const uploadApi = {
+  single: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return axios.post(`${config.apiBaseUrl}/api/upload/single`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  multiple: (files: File[]) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('images', file));
+    return axios.post(`${config.apiBaseUrl}/api/upload/multiple`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  delete: (filename: string) => api.delete(`/upload/${filename}`)
+};
+
+// Appointments API
+export const appointmentApi = {
+  getAll: (params?: any) => api.get('/appointments', { params }),
+  getById: (id: number) => api.get(`/appointments/${id}`),
+  create: (data: any) => api.post('/appointments', data),
+  update: (id: number, data: any) => api.put(`/appointments/${id}`, data),
+  delete: (id: number) => api.delete(`/appointments/${id}`),
+  updateStatus: (id: number, status: string) => api.patch(`/appointments/${id}/status`, { status })
 };
 
 export default api;
