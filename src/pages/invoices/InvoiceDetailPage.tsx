@@ -307,218 +307,249 @@ const InvoiceDetailPage = () => {
         </div>
       </div>
 
-      {/* Document */}
+      {/* Document - A4 Paper Style */}
       <div
         id="invoice-document"
-        className="bg-white rounded-lg border border-gray-200 p-8 print:border-0 print:p-6"
+        className="bg-white rounded-lg shadow-lg mx-auto print:shadow-none print:rounded-none print:w-full"
+        style={{ maxWidth: "210mm" }}
       >
-        {/* Header - Compact for print */}
-        <div className="text-center mb-6 pb-4 border-b-2 border-blue-600 print:mb-4 print:pb-2">
-          <h1 className="text-4xl font-bold mb-2 print:text-2xl print:mb-1">ใบแจ้งหนี้</h1>
-          <p className="text-xl text-gray-600 print:text-base">INVOICE</p>
+        <div className="p-12 print:p-4">
+        {/* Header - New Layout: Shop Info (Left) + Document Title (Right) */}
+        <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-blue-600 print:mb-4 print:pb-2">
+          {/* Left: Shop Info */}
+          <div>
+            <h2 className="text-base font-bold text-gray-900 print:text-sm">ระบบจัดการเอกสารธุรกิจ</h2>
+            <p className="text-xs text-gray-600 print:text-[10px]">Business Document Management System</p>
+            <div className="mt-2 text-xs text-gray-700 space-y-0.5 print:text-[10px]">
+              <p>123 ถนนสุขุมวิท กรุงเทพฯ 10110</p>
+              <p>Tel: 02-123-4567 | Email: info@business.com</p>
+              <p>เลขประจำตัวผู้เสียภาษี: 0-1234-56789-01-2</p>
+            </div>
+          </div>
+          
+          {/* Right: Document Title */}
+          <div className="text-right">
+            <h1 className="text-3xl font-bold text-blue-600 print:text-2xl">ใบแจ้งหนี้</h1>
+            <p className="text-lg font-medium text-gray-600 print:text-base">INVOICE</p>
+          </div>
         </div>
 
-        {/* Info Grid - Adjusted spacing */}
-        <div className="grid grid-cols-2 gap-8 mb-8 print:gap-4 print:mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 print:mb-1 print:text-xs">
-              ข้อมูลลูกค้า
-            </h3>
-            <div className="space-y-2 print:space-y-1">
-              <div className="flex items-start gap-2">
-
-                <User className="w-4 h-4 text-gray-400 mt-1" />
-                <div>
-                  <div className="font-semibold text-gray-900">
-                    {invoice.customerName}
-                  </div>
-                  {invoice.customer?.taxId && (
-                    <div className="text-sm text-gray-600">
-                      เลขประจำตัวผู้เสียภาษี: {invoice.customer.taxId}
-                    </div>
-                  )}
-                </div>
+        {/* Info Section - Customer (Left) + Document Info (Right) */}
+        <div className="flex flex-col md:flex-row gap-6 mb-6 print:flex-row print:gap-6 print:mb-4">
+          
+          {/* Left Column - Customer Info */}
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-gray-800 mb-3 pb-2 border-b border-gray-300">ข้อมูลลูกค้า | CUSTOMER INFORMATION</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex">
+                <span className="w-20 font-bold text-gray-700">ชื่อ</span>
+                <span className="flex-1 text-gray-900 font-semibold">{invoice.customerName}</span>
               </div>
+              {invoice.customer?.taxId && (
+                <div className="flex">
+                  <span className="w-20 font-bold text-gray-700">เลขที่ภาษี</span>
+                  <span className="flex-1 text-gray-900">{invoice.customer.taxId}</span>
+                </div>
+              )}
               {invoice.customerPhone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-700">{invoice.customerPhone}</span>
+                <div className="flex">
+                  <span className="w-20 font-bold text-gray-700">โทรศัพท์</span>
+                  <span className="flex-1 text-gray-900">{invoice.customerPhone}</span>
                 </div>
               )}
               {invoice.customerAddress && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-gray-400 mt-1" />
-                  <span className="text-gray-700">
-                    {invoice.customerAddress}
-                  </span>
+                <div className="flex">
+                  <span className="w-20 font-bold text-gray-700">ที่อยู่</span>
+                  <span className="flex-1 text-gray-900">{invoice.customerAddress}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">
-              ข้อมูลเอกสาร
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-700">
-                  <span className="font-medium">เลขที่:</span>{" "}
-                  {invoice.invoiceNo}
-                </span>
+          {/* Right Column - Document Info */}
+          <div className="w-full md:w-80 print:w-80">
+            <div>
+              <div className="space-y-3 text-sm">
+                 <div className="flex justify-between">
+                    <span className="font-bold text-gray-700">เลขที่เอกสาร</span>
+                    <span className="font-bold text-blue-600">{invoice.invoiceNo}</span>
+                 </div>
+                 <div className="flex justify-between">
+                    <span className="font-bold text-gray-700">วันที่</span>
+                    <span className="font-semibold text-gray-900">{new Date(invoice.createdAt).toLocaleDateString("th-TH")}</span>
+                 </div>
+                 {invoice.dueDate && (
+                   <div className="flex justify-between">
+                      <span className="font-bold text-gray-700">ครบกำหนด</span>
+                      <span className="font-semibold text-gray-900">{new Date(invoice.dueDate).toLocaleDateString("th-TH")}</span>
+                   </div>
+                 )}
+                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                      <span className="font-bold text-gray-700">สถานะ</span>
+                      {getStatusBadge(invoice.status)}
+                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-700">
-                  <span className="font-medium">วันที่:</span>{" "}
-                  {new Date(invoice.createdAt).toLocaleDateString("th-TH")}
-                </span>
-              </div>
-              {invoice.dueDate && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-700">
-                    <span className="font-medium">ครบกำหนด:</span>{" "}
-                    {new Date(invoice.dueDate).toLocaleDateString("th-TH")}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Items Table - Compact padding */}
+        {/* Items Table - Blue Header Style */}
         <div className="mb-8 print:mb-4">
-          <table className="w-full">
+          <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-gray-300">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 print:py-2 print:px-2">
-
-                  ลำดับ
+              <tr className="bg-blue-600 text-white">
+                <th className="py-3 px-4 text-center font-bold w-[8%] print:py-2 print:px-2 border border-blue-700">
+                  ลำดับ<br/><span className="text-xs font-normal">No.</span>
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                  รายการ
+                <th className="py-3 px-4 text-left font-bold w-[42%] print:py-2 print:px-2 border border-blue-700">
+                  รายการ<br/><span className="text-xs font-normal">Description</span>
                 </th>
-                <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
-                  จำนวน
+                <th className="py-3 px-4 text-center font-bold w-[15%] print:py-2 print:px-2 border border-blue-700">
+                  จำนวน<br/><span className="text-xs font-normal">Quantity</span>
                 </th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                  ราคา/หน่วย
+                <th className="py-3 px-4 text-right font-bold w-[17%] print:py-2 print:px-2 border border-blue-700">
+                  ราคา/หน่วย<br/><span className="text-xs font-normal">Unit Price</span>
                 </th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                  ยอดรวม
+                <th className="py-3 px-4 text-right font-bold w-[18%] print:py-2 print:px-2 border border-blue-700">
+                  จำนวนเงิน<br/><span className="text-xs font-normal">Amount</span>
                 </th>
               </tr>
             </thead>
             <tbody>
               {invoice.items.map((item: any, index: number) => (
-                <tr key={item.id} className="border-b border-gray-200">
-                  <td className="py-3 px-4 text-gray-700 print:py-2 print:px-2">{index + 1}</td>
-                  <td className="py-3 px-4 print:py-2 print:px-2">
-
-                    <div className="font-medium text-gray-900">
+                <tr key={item.id} className="border-b border-gray-200 hover:bg-blue-50/30 transition-colors">
+                  <td className="py-3 px-4 text-center text-gray-700 print:py-2 print:px-2 border-l border-r border-gray-200">{index + 1}</td>
+                  <td className="py-3 px-4 print:py-2 print:px-2 border-r border-gray-200">
+                    <div className="font-semibold text-gray-900">
                       {item.productName}
                     </div>
                     {item.description && (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-xs text-gray-600 mt-1">
                         {item.description}
                       </div>
                     )}
-
                   </td>
-                  <td className="py-3 px-4 text-center text-gray-700 print:py-2 print:px-2">
+                  <td className="py-3 px-4 text-center text-gray-700 print:py-2 print:px-2 border-r border-gray-200">
                     {item.quantity}
                   </td>
-                  <td className="py-3 px-4 text-right text-gray-700 print:py-2 print:px-2">
-                    ฿{parseFloat(item.price).toLocaleString()}
+                  <td className="py-3 px-4 text-right text-gray-700 print:py-2 print:px-2 border-r border-gray-200">
+                    {parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="py-3 px-4 text-right font-semibold text-gray-900 print:py-2 print:px-2">
-                    ฿{parseFloat(item.total).toLocaleString()}
+                  <td className="py-3 px-4 text-right font-semibold text-gray-900 print:py-2 print:px-2 border-r border-gray-200">
+                    {parseFloat(item.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
-
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Summary - Reduced margins */}
-        <div className="flex justify-end mb-8 print:mb-4">
-          <div className="w-80">
-            <div className="space-y-2 print:space-y-1">
-              <div className="flex justify-between py-2 text-gray-700 print:py-1">
-                <span>ยอดรวม</span>
+        {/* Added spacer to push summary down */}
+        <div className="min-h-[150px] print:min-h-[100px]"></div>
 
-                <span className="font-semibold">
-                  ฿{parseFloat(invoice.subtotal).toLocaleString()}
+        {/* Summary Section - Right Aligned */}
+        <div className="flex justify-end mb-6 print:mb-4">
+          <div className="w-full md:w-80 print:w-80">
+            <div className="space-y-2 text-sm border-t-2 border-blue-600 pt-4">
+              <div className="flex justify-between py-2">
+                <span className="text-gray-700">ยอดรวม</span>
+                <span className="font-semibold text-gray-900">
+                  {parseFloat(invoice.subtotal).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })} บาท
                 </span>
               </div>
               {parseFloat(invoice.discount) > 0 && (
-                <div className="flex justify-between py-2 text-gray-700">
+                <div className="flex justify-between py-2 text-red-600">
                   <span>ส่วนลด</span>
                   <span className="font-semibold">
-                    -฿{parseFloat(invoice.discount).toLocaleString()}
+                    -{parseFloat(invoice.discount).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })} บาท
                   </span>
                 </div>
               )}
-              <div className="flex justify-between py-2 text-gray-700">
-                <span>VAT {invoice.vat}%</span>
-                <span className="font-semibold">
-                  ฿
+              <div className="flex justify-between py-2">
+                <span className="text-gray-700">ภาษีมูลค่าเพิ่ม {invoice.vat}%</span>
+                <span className="font-semibold text-gray-900">
                   {(
                     ((parseFloat(invoice.subtotal) -
                       parseFloat(invoice.discount)) *
                       parseFloat(invoice.vat)) /
                     100
-                  ).toLocaleString()}
+                  ).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })} บาท
                 </span>
               </div>
-              <div className="flex justify-between py-3 border-t-2 border-gray-300 text-xl font-bold text-gray-900">
-                <span>ยอดรวมสุทธิ</span>
-                <span className="text-blue-600">
-                  ฿{parseFloat(invoice.total).toLocaleString()}
+              <div className="flex justify-between py-3 px-4 bg-blue-50/50 rounded text-base font-bold text-gray-900 mt-2">
+                <span>จำนวนเงินทั้งสิ้น</span>
+                <span>
+                  {parseFloat(invoice.total).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })} บาท
                 </span>
               </div>
               {parseFloat(invoice.paidAmount) > 0 && (
-                <>
-                  <div className="flex justify-between py-2 text-green-600">
+                <div className="pt-2 border-t border-blue-200">
+                  <div className="flex justify-between py-1 text-green-600">
                     <span className="font-medium">ชำระแล้ว</span>
                     <span className="font-semibold">
                       ฿{parseFloat(invoice.paidAmount).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between py-2 text-red-600">
+                  <div className="flex justify-between py-1 text-red-600">
                     <span className="font-medium">คงเหลือ</span>
                     <span className="font-semibold">
                       ฿{parseFloat(invoice.remainingAmount).toLocaleString()}
                     </span>
                   </div>
-                </>
-              )}
-
-              {/* QR Code in Summary */}
-              {qrCodeDataUrl && parseFloat(invoice.remainingAmount) > 0 && (
-                <div className="pt-4 mt-2 border-t border-gray-200 flex flex-col items-end">
-                  <img
-                    src={qrCodeDataUrl}
-                    alt="PromptPay QR"
-                    className="w-24 h-24 object-contain border border-gray-200 rounded p-1 mb-2"
-                  />
-                  <div className="text-xs font-bold text-blue-800 mb-1">ชำระเงินทางออนไลน์</div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bank/Payment Channels - New Design */}
+        <div className="mb-6 mt-8 border-t border-gray-200 pt-4 print:mb-4 print:mt-6">
+          <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+            
+            <span>ช่องทางชำระเงิน</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Bank 1 - Kasikorn */}
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                K
+              </div>
+              <div className="text-sm flex-1">
+                <div className="font-semibold text-gray-900">ธ.กสิกรไทย</div>
+                <div className="text-gray-600"> <span className="font-semibold text-gray-900">209-1-72241-3</span></div>
+                <div className="text-gray-500 text-xs mt-1">ชื่อบัญชี ฮาบีดีน บุญสาลี</div>
+              </div>
+            </div>
+
+            {/* Bank 2 - SCB */}
+            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                S
+              </div>
+              <div className="text-sm flex-1">
+                <div className="font-semibold text-gray-900">ธ.ไทยพาณิชย์</div>
+                <div className="text-gray-600"> <span className="font-semibold text-gray-900">302-429452-4</span></div>
+                <div className="text-gray-500 text-xs mt-1">ชื่อบัญชี ฮาบีดีน บุญสาลี</div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Notes */}
         {invoice.notes && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg print:mb-4 print:p-2 print:bg-gray-100 print:text-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2 print:mb-1">
-              หมายเหตุ
+          <div className="mb-6 p-4 bg-gray-50 border-l-4 border-blue-500 rounded-r-lg print:mb-4 print:p-2 print:text-sm">
+            <h3 className="text-sm font-bold text-gray-800 mb-1 print:mb-1">
+              หมายเหตุ:
             </h3>
-            <p className="text-gray-700 whitespace-pre-line">{invoice.notes}</p>
+            <p className="text-gray-700 whitespace-pre-line text-sm">{invoice.notes}</p>
           </div>
         )}
 
@@ -541,89 +572,18 @@ const InvoiceDetailPage = () => {
           </div>
         )}
 
-        {/* Signatures - Compact Layout */}
-        {((invoice.acceptanceSignature) || (invoice.signatures && invoice.signatures.length > 0)) && (
-          <div className="mt-4 pt-2 border-t border-gray-200 print:mt-2 print:pt-1">
-            <h3 className="text-xs font-bold text-gray-900 mb-2 print:mb-1 print:text-[10px]">ลายเซ็น</h3>
-            <div className="flex gap-4 print:gap-2">
-              {/* Job Acceptance Signature */}
-              {invoice.acceptanceSignature && (
-                <div className="flex-1">
-                  <div className="border border-gray-300 rounded p-2 bg-white min-h-[80px] flex items-center justify-center print:min-h-[50px] print:p-1">
-                    <img
-                      src={invoice.acceptanceSignature}
-                      alt="ลายเซ็นรับงาน"
-                      className="max-h-16 print:max-h-12"
-                    />
-                  </div>
-                  <div className="mt-3 text-center">
-                    <p className="font-semibold text-gray-900">
-                      {invoice.customerName}
-                    </p>
-                    <p className="text-sm text-gray-600">ลูกค้า (รับงาน)</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      ลงนามวันที่:{" "}
-                      {new Date(invoice.updatedAt).toLocaleDateString(
-                        "th-TH",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
 
-              {/* Other Signatures */}
-              {invoice.signatures && invoice.signatures.map((signature: any) => (
-                <div key={signature.id} className="flex-1">
-                  <div className="border border-gray-300 rounded p-2 bg-white print:p-1">
-                    <img
-                      src={signature.signatureUrl}
-                      alt={`ลายเซ็น${signature.type === "shop" ? "ร้านค้า" : "ลูกค้า"}`}
-                      className="max-h-16 mx-auto print:max-h-12"
-                    />
-                  </div>
-                  <div className="mt-3 text-center">
-                    <p className="font-semibold text-gray-900">
-                      {signature.signerName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {signature.type === "shop" ? "ผู้ขาย" : "ลูกค้า"}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      ลงนามวันที่:{" "}
-                      {new Date(signature.signedAt).toLocaleDateString(
-                        "th-TH",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="mt-12 pt-8 border-t border-gray-200 text-center text-sm text-gray-600 print:mt-6 print:pt-4">
           <p>ขอบคุณที่ใช้บริการ</p>
         </div>
+        </div>
       </div>
 
-      {/* Receipts Section - เพิ่มหลัง Payment History */}
+      {/* Receipts Section - ย้ายออกมาด้านนอก invoice-document */}
       {receipts && receipts.length > 0 && (
-        <div className="mb-8 print:break-inside-avoid">
+        <div className="mb-8 print:hidden">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-indigo-100 rounded-lg">
               <FileCheck className="w-5 h-5 text-indigo-600" />

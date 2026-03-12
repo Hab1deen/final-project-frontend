@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -28,16 +28,68 @@ import {
 } from "recharts";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
+interface DashboardStats {
+  todaySales: number;
+  quotationsCount: number;
+  invoicesCount: number;
+  receiptsCount: number;
+  customersCount: number;
+  paidInvoices: number;
+  partialInvoices: number;
+  unpaidInvoices: number;
+  totalPaid: number;
+  totalRemaining: number;
+  totalRevenue: number;
+}
+
+interface MonthlySale {
+  month: string;
+  completed: number;
+  inProgress: number;
+}
+
+interface Invoice {
+  id: number;
+  total: string | number;
+  paidAmount: string | number;
+  remainingAmount: string | number;
+  status: string;
+  createdAt: string;
+}
+
+interface Receipt {
+  id: number;
+  receiptNo: string;
+  customerName: string;
+  amount: string | number;
+  createdAt: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: { name: string; value: number; color: string }[];
+  label?: string;
+}
+
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  icon: React.ElementType;
+  trend?: "up" | "down";
+  trendValue?: string;
+  color: string;
+}
+
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [monthlySales, setMonthlySales] = useState<any[]>([]);
-  const [receipts, setReceipts] = useState<any[]>([]);
-  const [allInvoices, setAllInvoices] = useState<any[]>([]);
+  const [monthlySales, setMonthlySales] = useState<MonthlySale[]>([]);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
   const [timeRange, setTimeRange] = useState<"1m" | "6m" | "1y">("6m");
 
   useEffect(() => {
@@ -70,11 +122,38 @@ const DashboardPage = () => {
 
         const today = new Date().toDateString();
         const todaySales = invoices
-          .filter((inv: any) => new Date(inv.createdAt).toDateString() === today)
-          .reduce((sum: number, inv: any) => sum + parseFloat(inv.total), 0);
+          .filter(
+            (inv: Invoice) => new Date(inv.createdAt).toDateString() === today
+          )
+          .reduce(
+            (sum: number, inv: Invoice) => sum + parseFloat(String(inv.total)),
+            0
+          );
+
+        const paidInvoices = invoices.filter(
+          (i: Invoice) => i.status === "paid"
+        ).length;
+        const partialInvoices = invoices.filter(
+          (i: Invoice) => i.status === "partial"
+        ).length;
+        const unpaidInvoices = invoices.filter(
+          (i: Invoice) => i.status === "unpaid"
+        ).length;
+
+        const totalPaid = invoices.reduce(
+          (sum: number, inv: Invoice) =>
+            sum + parseFloat(String(inv.paidAmount)),
+          0
+        );
+        const totalRemaining = invoices.reduce(
+          (sum: number, inv: Invoice) =>
+            sum + parseFloat(String(inv.remainingAmount)),
+          0
+        );
 
         const totalRevenue = receiptsData.reduce(
-          (sum: number, r: any) => sum + parseFloat(r.amount),
+          (sum: number, receipt: Receipt) =>
+            sum + parseFloat(String(receipt.amount)),
           0
         );
 
@@ -84,19 +163,23 @@ const DashboardPage = () => {
           invoicesCount: invoices.length,
           receiptsCount: receiptsData.length,
           customersCount: customers.length,
+          paidInvoices,
+          partialInvoices,
+          unpaidInvoices,
+          totalPaid,
+          totalRemaining,
           totalRevenue,
         });
 
         setAllInvoices(invoices);
 
-        setReceipts(
-          receiptsData
-            .sort(
-              (a: any, b: any) =>
-                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            )
-            .slice(0, 5)
-        );
+        const recentReceipts = receiptsData
+          .sort((a: Receipt, b: Receipt) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+          .slice(0, 5);
+
+        setReceipts(recentReceipts);
       } else {
         // Regular user — fetch counts only, no financial data
         const [quotationsRes, invoicesRes, customersRes] = await Promise.all([
@@ -108,7 +191,15 @@ const DashboardPage = () => {
         setStats({
           quotationsCount: quotationsRes.data.data.length,
           invoicesCount: invoicesRes.data.data.length,
+          receiptsCount: 0,
           customersCount: customersRes.data.data.length,
+          todaySales: 0,
+          paidInvoices: 0,
+          partialInvoices: 0,
+          unpaidInvoices: 0,
+          totalPaid: 0,
+          totalRemaining: 0,
+          totalRevenue: 0,
         });
       }
     } catch (error) {
@@ -118,8 +209,8 @@ const DashboardPage = () => {
     }
   };
 
-  const calculateSalesData = (invoices: any[], range: "1m" | "6m" | "1y") => {
-    const data = [];
+  const calculateSalesData = (invoices: Invoice[], range: "1m" | "6m" | "1y") => {
+    const data: MonthlySale[] = [];
     const now = new Date();
 
     if (range === "1m") {
@@ -130,12 +221,15 @@ const DashboardPage = () => {
           day: "numeric",
           month: "short",
         });
+        const dateString = date.toDateString();
         const sales = invoices
           .filter(
-            (inv: any) =>
-              new Date(inv.createdAt).toDateString() === date.toDateString()
+            (inv: Invoice) => new Date(inv.createdAt).toDateString() === dateString
           )
-          .reduce((sum: number, inv: any) => sum + parseFloat(inv.total), 0);
+          .reduce(
+            (sum: number, inv: Invoice) => sum + parseFloat(String(inv.total)),
+            0
+          );
         data.push({ month: dayMonth, completed: sales * 0.6, inProgress: sales * 0.4 });
       }
     } else {
@@ -144,24 +238,31 @@ const DashboardPage = () => {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthName = date.toLocaleDateString("th-TH", { month: "short" });
         const sales = invoices
-          .filter((inv: any) => {
-            const d = new Date(inv.createdAt);
-            return d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
+          .filter((inv: Invoice) => {
+            const invDate = new Date(inv.createdAt);
+            return (
+              invDate.getMonth() === date.getMonth() &&
+              invDate.getFullYear() === date.getFullYear()
+            );
           })
-          .reduce((sum: number, inv: any) => sum + parseFloat(inv.total), 0);
-        data.push({ month: monthName, completed: sales * 0.6, inProgress: sales * 0.4 });
+          .reduce((sum: number, inv: Invoice) => sum + parseFloat(String(inv.total)), 0);
+        data.push({
+          month: monthName,
+          completed: sales * 0.6,
+          inProgress: sales * 0.4,
+        });
       }
     }
     return data;
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-4 border border-gray-100 shadow-xl rounded-xl">
           <p className="text-sm font-bold text-gray-900 mb-2">{label}</p>
           <div className="space-y-1">
-            {payload.map((entry: any, index: number) => (
+            {payload.map((entry, index: number) => (
               <div key={index} className="flex items-center justify-between gap-4 text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -194,14 +295,7 @@ const DashboardPage = () => {
     trend,
     trendValue,
     color,
-  }: {
-    title: string;
-    value: string | number;
-    icon: React.ElementType;
-    trend?: "up" | "down";
-    trendValue?: string;
-    color: string;
-  }) => (
+  }: StatCardProps) => (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
       <div
         className={`absolute -right-4 -top-4 w-24 h-24 bg-${color}-50 rounded-full opacity-50 group-hover:scale-125 transition-transform duration-500`}
@@ -454,7 +548,7 @@ const DashboardPage = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-emerald-600">
-                        +฿{parseFloat(receipt.amount).toLocaleString()}
+                        +฿{parseFloat(String(receipt.amount)).toLocaleString()}
                       </p>
                       <p className="text-[10px] text-gray-400">
                         {new Date(receipt.createdAt).toLocaleDateString("th-TH", {

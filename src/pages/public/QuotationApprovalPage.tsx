@@ -587,7 +587,10 @@ const QuotationApprovalPage = () => {
                 {/* Footer */}
                 <div className="text-center mt-8 text-gray-600">
                     <p className="text-sm">Easybill Online</p>
+<<<<<<< HEAD
                     <p className="text-xs mt-1">ระบบจัดการเอกสารธุรกิจ</p>
+=======
+>>>>>>> 2828660 (feat: update invoice, quotation, receipt, and dashboard pages)
                 </div>
             </div>
         </div>
