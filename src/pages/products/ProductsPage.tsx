@@ -5,7 +5,6 @@ import Card from '../../components/common/Card';
 import PageHeader from '../../components/common/PageHeader';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { showSuccess, showError, showDeleteConfirm } from '../../utils/alert';
 
 interface Product {
@@ -23,9 +22,7 @@ const ProductsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -99,24 +96,17 @@ const ProductsPage = () => {
     }
   };
 
-  // เปิด Delete Dialog
-  const openDeleteDialog = (product: Product) => {
-    setDeletingProduct(product);
-    setShowDeleteDialog(true);
-  };
-
   // ลบสินค้า
-  const handleDelete = async () => {
-    if (!deletingProduct) return;
-
-    const confirmed = await showDeleteConfirm(deletingProduct.name);
-    if (!confirmed) return;
+  const handleDelete = async (product: Product) => {
+    const result = await showDeleteConfirm(
+      `คุณแน่ใจหรือไม่ที่จะลบสินค้า "${product.name}"?`,
+      'การกระทำนี้ไม่สามารถย้อนกลับได้'
+    );
+    if (!result.isConfirmed) return;
 
     try {
-      await productApi.delete(deletingProduct.id);
+      await productApi.delete(product.id);
       showSuccess('ลบสินค้าสำเร็จ');
-      setShowDeleteDialog(false);
-      setDeletingProduct(null);
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -246,7 +236,7 @@ const ProductsPage = () => {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => openDeleteDialog(product)}
+                        onClick={() => handleDelete(product)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="ลบ"
                       >
@@ -362,20 +352,6 @@ const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* Delete Confirmation */}
-      <ConfirmDialog
-        isOpen={showDeleteDialog}
-        onCancel={() => {
-          setShowDeleteDialog(false);
-          setDeletingProduct(null);
-        }}
-        onConfirm={handleDelete}
-        title="ยืนยันการลบ"
-        message={`คุณแน่ใจหรือไม่ที่จะลบสินค้า "${deletingProduct?.name}"?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
-        type="danger"
-      />
     </div>
   );
 };

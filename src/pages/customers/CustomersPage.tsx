@@ -5,7 +5,6 @@ import Card from '../../components/common/Card';
 import PageHeader from '../../components/common/PageHeader';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { showSuccess, showError, showDeleteConfirm } from '../../utils/alert';
 
 interface Customer {
@@ -27,9 +26,7 @@ const CustomersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -106,24 +103,17 @@ const CustomersPage = () => {
     }
   };
 
-  // เปิด Delete Dialog
-  const openDeleteDialog = (customer: Customer) => {
-    setDeletingCustomer(customer);
-    setShowDeleteDialog(true);
-  };
-
   // ลบลูกค้า
-  const handleDelete = async () => {
-    if (!deletingCustomer) return;
-
-    const confirmed = await showDeleteConfirm(deletingCustomer.name);
-    if (!confirmed) return;
+  const handleDelete = async (customer: Customer) => {
+    const result = await showDeleteConfirm(
+      `คุณแน่ใจหรือไม่ที่จะลบลูกค้า "${customer.name}"?`,
+      'การกระทำนี้ไม่สามารถย้อนกลับได้'
+    );
+    if (!result.isConfirmed) return;
 
     try {
-      await customerApi.delete(deletingCustomer.id);
+      await customerApi.delete(customer.id);
       showSuccess('ลบลูกค้าสำเร็จ');
-      setShowDeleteDialog(false);
-      setDeletingCustomer(null);
       fetchCustomers();
     } catch (error) {
       console.error('Error deleting customer:', error);
@@ -242,7 +232,7 @@ const CustomersPage = () => {
               <Button
                 variant="danger"
                 icon={Trash2}
-                onClick={() => openDeleteDialog(customer)}
+                onClick={() => handleDelete(customer)}
                 className="flex-1"
               >
                 ลบ
@@ -270,7 +260,7 @@ const CustomersPage = () => {
           {/* ชื่อ */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              ชื่อ-นามสกุล <span className="text-red-500">*</span>
+              ชื่อ / บริษัท <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -356,20 +346,6 @@ const CustomersPage = () => {
         </form>
       </Modal>
 
-      {/* Delete Confirmation */}
-      <ConfirmDialog
-        isOpen={showDeleteDialog}
-        onCancel={() => {
-          setShowDeleteDialog(false);
-          setDeletingCustomer(null);
-        }}
-        onConfirm={handleDelete}
-        title="ยืนยันการลบ"
-        message={`คุณแน่ใจหรือไม่ที่จะลบลูกค้า "${deletingCustomer?.name}"?`}
-        confirmText="ลบ"
-        cancelText="ยกเลิก"
-        type="danger"
-      />
     </div>
   );
 };
