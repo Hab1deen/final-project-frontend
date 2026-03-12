@@ -82,7 +82,7 @@ interface StatCardProps {
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -93,13 +93,16 @@ const DashboardPage = () => {
   const [timeRange, setTimeRange] = useState<"1m" | "6m" | "1y">("6m");
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchDashboardData();
-  }, []);
+  }, [authLoading, user, isAdmin]);
 
   useEffect(() => {
     if (allInvoices.length > 0) {
       setMonthlySales(calculateSalesData(allInvoices, timeRange));
+      return;
     }
+    setMonthlySales([]);
   }, [allInvoices, timeRange]);
 
   const fetchDashboardData = async () => {
@@ -181,26 +184,85 @@ const DashboardPage = () => {
 
         setReceipts(recentReceipts);
       } else {
-        // Regular user — fetch counts only, no financial data
-        const [quotationsRes, invoicesRes, customersRes] = await Promise.all([
+        // Regular user — fetch their own data
+        const [quotationsRes, invoicesRes, receiptsRes] = await Promise.all([
           quotationApi.getAll(),
           invoiceApi.getAll(),
-          customerApi.getAll(),
+          receiptApi.getAll(),
+        ]);
+
+        const quotations = quotationsRes.data.data;
+        const invoices = invoicesRes.data.data;
+        const receiptsData = receiptsRes.data.data;
+
+        // Calculate user's stats
+        const today = new Date().toDateString();
+        const todaySales = invoices
+          .filter(
+            (inv: Invoice) => new Date(inv.createdAt).toDateString() === today
+          )
+          .reduce(
+            (sum: number, inv: Invoice) => sum + parseFloat(String(inv.total)),
+            0
+          );
+
+        const paidInvoices = invoices.filter(
+          (i: Invoice) => i.status === "paid"
+        ).length;
+        const partialInvoices = invoices.filter(
+          (i: Invoice) => i.status === "partial"
+        ).length;
+        const unpaidInvoices = invoices.filter(
+          (i: Invoice) => i.status === "unpaid"
+        ).length;
+
+        const totalPaid = invoices.reduce(
+          (sum: number, inv: Invoice) =>
+            sum + parseFloat(String(inv.paidAmount)),
+          0
+        );
+        const totalRemaining = invoices.reduce(
+          (sum: number, inv: Invoice) =>
+            sum + parseFloat(String(inv.remainingAmount)),
+          0
+        );
+
+        const totalRevenue = receiptsData.reduce(
+          (sum: number, receipt: Receipt) =>
+            sum + parseFloat(String(receipt.amount)),
+          0
+        );
+
+        // Get unique customer count from user's documents
+        const customerIds = new Set([
+          ...quotations.map((q: any) => q.customerId).filter(Boolean),
+          ...invoices.map((i: any) => i.customerId).filter(Boolean)
         ]);
 
         setStats({
-          quotationsCount: quotationsRes.data.data.length,
-          invoicesCount: invoicesRes.data.data.length,
-          receiptsCount: 0,
-          customersCount: customersRes.data.data.length,
-          todaySales: 0,
-          paidInvoices: 0,
-          partialInvoices: 0,
-          unpaidInvoices: 0,
-          totalPaid: 0,
-          totalRemaining: 0,
-          totalRevenue: 0,
+          todaySales,
+          quotationsCount: quotations.length,
+          invoicesCount: invoices.length,
+          receiptsCount: receiptsData.length,
+          customersCount: customerIds.size,
+          paidInvoices,
+          partialInvoices,
+          unpaidInvoices,
+          totalPaid,
+          totalRemaining,
+          totalRevenue,
         });
+
+        setAllInvoices(invoices);
+
+        // Get recent documents for this user
+        const recentReceipts = receiptsData
+          .sort((a: Receipt, b: Receipt) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+          .slice(0, 5);
+
+        setReceipts(recentReceipts);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -331,7 +393,7 @@ const DashboardPage = () => {
     </div>
   );
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <LoadingSpinner />
@@ -344,11 +406,19 @@ const DashboardPage = () => {
     return (
       <div className="max-w-7xl mx-auto space-y-8 pb-10">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">สวัสดี, {user?.name} 👋</h2>
-          <p className="text-blue-100 text-sm">
-            ยินดีต้อนรับเข้าสู่ระบบ Easybill Online
-          </p>
+        <div className="bg-white rounded-2xl px-6 py-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Easybill Online</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                ระบบจัดการเอกสารทางธุรกิจขนาดเล็ก
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-sm text-gray-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              ผู้ใช้งานทั่วไป
+            </div>
+          </div>
         </div>
 
         {/* Counts Only */}
@@ -394,11 +464,126 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Restricted Notice */}
-        <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 text-sm">
-          <Lock className="w-4 h-4 shrink-0" />
-          <span>ข้อมูลรายได้และรายงานทางการเงินสำหรับ Admin เท่านั้น</span>
+        {/* Recent Documents */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-gray-900">รายการล่าสุดของคุณ</h3>
+            <button
+              onClick={() => navigate("/receipts")}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="space-y-4">
+            {receipts.length > 0 ? (
+              receipts.map((receipt) => (
+                <div
+                  key={receipt.id}
+                  onClick={() => navigate(`/receipts/${receipt.id}`)}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100"
+                >
+                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
+                    <FileCheck className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600">
+                      {receipt.receiptNo}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {receipt.customerName}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-600">
+                      +฿{parseFloat(String(receipt.amount)).toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {new Date(receipt.createdAt).toLocaleDateString("th-TH", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-400">ยังไม่มีรายการ</div>
+            )}
+          </div>
         </div>
+
+        {/* Sales Chart for Regular Users */}
+        {monthlySales.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">ภาพรวมรายรับของคุณ</h3>
+                <p className="text-sm text-gray-500">
+                  เปรียบเทียบยอดที่ชำระแล้วกับที่รอชำระ
+                </p>
+              </div>
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value as "1m" | "6m" | "1y")}
+                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="1m">30 วันล่าสุด</option>
+                <option value="6m">6 เดือนล่าสุด</option>
+                <option value="1y">1 ปีล่าสุด</option>
+              </select>
+            </div>
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={monthlySales}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorInProgress" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#e2e8f0" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#e2e8f0" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "#94a3b8" }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "#94a3b8" }}
+                    tickFormatter={(val) => `฿${val / 1000}k`}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="inProgress"
+                    stroke="#cbd5e1"
+                    strokeWidth={2}
+                    fill="url(#colorInProgress)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="completed"
+                    stroke="#8b5cf6"
+                    strokeWidth={2}
+                    fill="url(#colorCompleted)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+       
       </div>
     );
   }

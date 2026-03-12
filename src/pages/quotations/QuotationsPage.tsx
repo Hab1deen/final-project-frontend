@@ -20,6 +20,7 @@ const QuotationsPage = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [pagination, setPagination] = useState<any>(null);
+  const [allStatusCounts, setAllStatusCounts] = useState<any>({});
 
   useEffect(() => {
     fetchQuotations();
@@ -57,11 +58,35 @@ const QuotationsPage = () => {
 
       setQuotations(data);
       setPagination(response.data.pagination);
+      
+      // Fetch status counts for all statuses
+      await fetchStatusCounts();
     } catch (error) {
       console.error("Error fetching quotations:", error);
       showError("ไม่สามารถโหลดข้อมูลได้");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStatusCounts = async () => {
+    try {
+      // Fetch counts for each status
+      const statuses = ['draft', 'sent', 'accepted', 'rejected', 'converted'];
+      const counts: any = {};
+      
+      for (const status of statuses) {
+        const response = await quotationApi.getAll({ status, limit: 1 });
+        counts[status] = response.data.pagination?.total || 0;
+      }
+      
+      // Get total count (all statuses)
+      const allResponse = await quotationApi.getAll({ limit: 1 });
+      counts.total = allResponse.data.pagination?.total || 0;
+      
+      setAllStatusCounts(counts);
+    } catch (error) {
+      console.error("Error fetching status counts:", error);
     }
   };
 
@@ -88,11 +113,11 @@ const QuotationsPage = () => {
   };
 
   const getStatusCount = (status: string) => {
-    // Use pagination total if available
-    if (pagination && statusFilter === status) {
-      return pagination.total;
+    // Use the total count from allStatusCounts
+    if (status === 'all') {
+      return allStatusCounts.total || 0;
     }
-    return 0;
+    return allStatusCounts[status] || 0;
   };
 
   const handlePageChange = (newPage: number) => {
@@ -118,7 +143,7 @@ const QuotationsPage = () => {
       {/* Header */}
       <PageHeader
         title="ใบเสนอราคา"
-        description={`จัดการใบเสนอราคาทั้งหมด ${quotations.length} รายการ`}
+        description={`จัดการใบเสนอราคาทั้งหมด ${allStatusCounts.total || 0} รายการ`}
         action={
           <Button
             icon={Plus}
@@ -135,7 +160,7 @@ const QuotationsPage = () => {
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">ทั้งหมด</p>
             <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1 md:mt-2">
-              {quotations.length}
+              {allStatusCounts.total || 0}
             </p>
           </div>
         </Card>
@@ -144,7 +169,7 @@ const QuotationsPage = () => {
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">ร่าง</p>
             <p className="text-3xl font-bold text-gray-900 mt-2">
-              {quotations.filter((q) => q.status === "draft").length}
+              {allStatusCounts.draft || 0}
             </p>
           </div>
         </Card>
@@ -153,7 +178,7 @@ const QuotationsPage = () => {
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">ส่งแล้ว</p>
             <p className="text-3xl font-bold text-gray-900 mt-2">
-              {quotations.filter((q) => q.status === "sent").length}
+              {allStatusCounts.sent || 0}
             </p>
           </div>
         </Card>
@@ -162,7 +187,7 @@ const QuotationsPage = () => {
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">อนุมัติ</p>
             <p className="text-3xl font-bold text-gray-900 mt-2">
-              {quotations.filter((q) => q.status === "accepted").length}
+              {allStatusCounts.accepted || 0}
             </p>
           </div>
         </Card>
@@ -171,7 +196,7 @@ const QuotationsPage = () => {
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">แปลงแล้ว</p>
             <p className="text-3xl font-bold text-gray-900 mt-2">
-              {quotations.filter((q) => q.status === "converted").length}
+              {allStatusCounts.converted || 0}
             </p>
           </div>
         </Card>
